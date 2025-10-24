@@ -1,9 +1,9 @@
-// frontend/src/components/EncryptForm.jsx
+// frontend/src/components/DecryptForm.jsx
 import React, { useState } from 'react';
-import { encryptMessage } from '../services/cryptoService.jsx';
+import { decryptMessage } from '../services/cryptoService.jsx';
 import AlgorithmSelect from './AlgorithmSelect.jsx';
 import ResultBox from './ResultBox.jsx';
-// import './Form.css'; 
+// import './Form.css';
 
 // Hangi yöntem için hangi etiket ve placeholder'ın kullanılacağını tanımla
 const methodDetails = {
@@ -21,11 +21,11 @@ const methodDetails = {
   },
 };
 
-function EncryptForm() {
+function DecryptForm() {
   const [method, setMethod] = useState('caesar');
-  const [key, setKey] = useState('3'); // Varsayılan anahtar '3' olarak kalabilir
-  const [message, setMessage] = useState('');
-  
+  const [key, setKey] = useState('3');
+  const [cipherText, setCipherText] = useState(''); 
+
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -44,12 +44,12 @@ function EncryptForm() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
     setIsLoading(true);
     setResult('');
     setError('');
     try {
-      const data = await encryptMessage(method, message, key);
+      const data = await decryptMessage(method, cipherText, key);
       setResult(data.result);
     } catch (err) {
       setError(err.toString());
@@ -60,16 +60,16 @@ function EncryptForm() {
 
   return (
     <form onSubmit={handleSubmit} className="crypto-form">
-      <h2><span role="img" aria-label="lock">🔒</span> İstemci - Mesaj Şifreleme</h2>
+      <h2><span role="img" aria-label="open-lock">🔓</span> Sunucu - Mesaj Deşifreleme</h2>
       
       {/* Güncellenmiş onChange handler'ını buraya ver */}
       <AlgorithmSelect value={method} onChange={handleMethodChange} />
 
       {/* --- GÜNCELLENEN BÖLÜM --- */}
       <div className="form-group">
-        <label htmlFor="key-encrypt">{methodDetails[method].label}</label>
+        <label htmlFor="key-decrypt">{methodDetails[method].label}</label>
         <input
-          id="key-encrypt"
+          id="key-decrypt"
           type="text"
           value={key}
           onChange={(e) => setKey(e.target.value)}
@@ -80,18 +80,18 @@ function EncryptForm() {
       {/* --- GÜNCELLEME SONU --- */}
 
       <div className="form-group">
-        <label htmlFor="message">Mesaj</label>
+        <label htmlFor="cipher-message">Şifreli Mesaj</label>
         <textarea
-          id="message"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Şifrelenecek mesajınızı buraya yazın..."
+          id="cipher-message"
+          value={cipherText}
+          onChange={(e) => setCipherText(e.target.value)}
+          placeholder="Deşifrelenecek mesajı buraya yapıştırın..."
           required
         />
       </div>
 
-      <button type="submit" className="btn-primary" disabled={isLoading}>
-        {isLoading ? 'Şifreleniyor...' : 'Şifrele'}
+      <button type="submit" className="btn-secondary" disabled={isLoading}>
+        {isLoading ? 'Deşifreleniyor...' : 'Deşifrele'}
       </button>
 
       <ResultBox result={result} error={error} />
@@ -99,4 +99,4 @@ function EncryptForm() {
   );
 }
 
-export default EncryptForm;
+export default DecryptForm;
