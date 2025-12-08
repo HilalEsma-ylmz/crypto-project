@@ -1,0 +1,61 @@
+=================================================================
+  WINDOWS'TA PATH'E NASIL EKLEMELISINIZ?
+=================================================================
+
+YÖNTEM 1: HIZLI (En Kolay)
+
+1. Windows tuşuna basın
+2. "environment" yazın
+3. "Edit the system environment variables" seçin
+4. "Environment Variables" butonuna tıklayın
+5. "Path" değişkenini bulun (System variables altında)
+6. "Edit" butonuna tıklayın
+7. "New" butonuna tıklayın
+8. Bu yolu yazın:
+   C:\Program Files\nodejs\
+9. "OK" tüm pencerelerde
+10. PowerShell'i yeniden başlatın
+
+YÖNTEM 2: Manuel (Adım Adım)
+
+Adım 1: sysdm.cpl'yi Aç
+   - Windows tuşu + R
+   - "sysdm.cpl" yazın
+   - Enter
+
+Adım 2: Environment Variables
+   - "Advanced" sekmesi
+   - "Environment Variables" butonu
+
+Adım 3: Path'i Düzenle
+   - "System variables" bölümünde
+   - "Path" satırını bulun
+   - "Edit" butonuna tıklayın
+
+Adım 4: Yeni Yol Ekle
+   - "New" butonuna tıklayın
+   - Şunu yazın: C:\Program Files\nodejs\
+   - "OK" tüm pencerelerde
+
+Adım 5: Kapat ve Yeniden Başlat
+   - Tüm pencereleri kapatın
+   - PowerShell'i kapatın
+   - YENİ PowerShell penceresi açın
+
+=================================================================
+
+YÖNTEM 3: PowerShell Komutları (İleri Seviye)
+
+PowerShell'i Administrator olarak açın ve şunu çalıştırın:
+
+$env:Path += ";C:\Program Files\nodejs\"
+
+[Environment]::SetEnvironmentVariable("Path", $env:Path, "Machine")
+
+Tüm PowerShell pencerelerini kapatın ve yeniden açın.
+
+=================================================================
+
+
+
+

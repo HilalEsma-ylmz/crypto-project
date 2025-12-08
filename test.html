@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Şifreleme ve Deşifreleme Sistemi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #f3f4f6;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connected {
+            background: #10b981;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .result-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e5e7eb;
+        }
+
+        .result-box {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .result-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .result-text {
+            background: white;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        .error-box {
+            background: #fef2f2;
+            border: 2px solid #fca5a5;
+            padding: 15px;
+            border-radius: 8px;
+            color: #dc2626;
+            margin-top: 15px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Şifreleme ve Deşifreleme Sistemi</h1>
+        
+        <div class="status">
+            <div class="status-indicator" id="statusIndicator"></div>
+            <span id="statusText">Bağlanıyor...</span>
+        </div>
+
+        <div class="form-group">
+            <label for="method">Şifreleme Yöntemi</label>
+            <select id="method">
+                <option value="caesar">Caesar / Sezar</option>
+                <option value="vigenere">Vigenere</option>
+                <option value="xor">XOR</option>
+                <option value="playfair">Playfair</option>
+                <option value="railfence">Rail Fence</option>
+                <option value="route">Route Cipher</option>
+                <option value="columnar">Columnar Transposition</option>
+                <option value="polybius">Polybius Cipher</option>
+                <option value="pigpen">Pigpen</option>
+                <option value="hill">Hill Cipher</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="key" id="keyLabel">Anahtar (Kaydırma Sayısı)</label>
+            <input type="text" id="key" value="3" placeholder="Örn: 3">
+        </div>
+
+        <div class="form-group">
+            <label for="message">Mesaj</label>
+            <textarea id="message" placeholder="Mesajınızı buraya yazın..."></textarea>
+        </div>
+
+        <button id="sendButton" onclick="sendMessage()">🚀 Gönder</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let ws = null;
+
+        // WebSocket bağlantısı
+        function connect() {
+            // localhost kullan (aynı makinede çalışıyorsa)
+            // Uzak sunucu için: ws://172.17.9.60:5000/ws
+            console.log('🔄 WebSocket bağlantısı kuruluyor... ws://localhost:5000/ws');
+            document.getElementById('statusText').textContent = 'Bağlanıyor...';
+            ws = new WebSocket('ws://localhost:5000/ws');
+            
+            ws.onopen = () => {
+                console.log('✅ WebSocket onopen eventi tetiklendi!');
+                console.log('WebSocket readyState:', ws.readyState);
+                document.getElementById('statusIndicator').classList.add('connected');
+                document.getElementById('statusText').textContent = 'Bağlanıyor... (Sunucu yanıtı bekleniyor)';
+                document.getElementById('sendButton').disabled = false;
+            };
+
+            ws.onmessage = (event) => {
+                console.log('📥 Sunucudan gelen ham veri:', event.data);
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('📥 Parse edilmiş veri:', data);
+                    // Bağlantı mesajı ise özel işle
+                    if (data.type === 'connection' && data.status === 'connected') {
+                        console.log('✅ Sunucu bağlantıyı onayladı - Durum güncelleniyor');
+                        document.getElementById('statusIndicator').classList.add('connected');
+                        document.getElementById('statusText').textContent = 'Bağlandı ✅';
+                        document.getElementById('sendButton').disabled = false;
+                        return;
+                    }
+                } catch (e) {
+                    console.log('⚠️ JSON parse hatası (normal olabilir):', e);
+                    // JSON parse hatası, normal mesaj olabilir
+                }
+                handleServerResponse(event.data);
+            };
+
+            ws.onerror = (error) => {
+                console.error('❌ WebSocket hatası:', error);
+                console.error('Hata detayları:', error.target?.url, error.target?.readyState);
+                document.getElementById('statusText').textContent = 'Bağlantı hatası ❌ - Konsolu kontrol edin';
+            };
+
+            ws.onclose = (event) => {
+                console.log('⚠️ WebSocket bağlantısı kapandı');
+                console.log('Close event detayları:', {
+                    code: event.code,
+                    reason: event.reason,
+                    wasClean: event.wasClean
+                });
+                document.getElementById('statusIndicator').classList.remove('connected');
+                document.getElementById('statusText').textContent = 'Bağlantı kapandı ⚠️ (3 saniye sonra yeniden deneniyor)';
+                document.getElementById('sendButton').disabled = true;
+                
+                // Yeniden bağlanmayı dene
+                setTimeout(() => {
+                    console.log('🔄 Yeniden bağlanma deneniyor...');
+                    connect();
+                }, 3000);
+            };
+        }
+
+        // Caesar şifreleme
+        function caesarEncrypt(text, shift) {
+            let result = "";
+            shift = parseInt(shift);
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
+                if (char >= 'a' && char <= 'z') {
+                    char = String.fromCharCode(((char.charCodeAt(0) - 'a'.charCodeAt(0) + shift) % 26) + 'a'.charCodeAt(0));
+                } else if (char >= 'A' && char <= 'Z') {
+                    char = String.fromCharCode(((char.charCodeAt(0) - 'A'.charCodeAt(0) + shift) % 26) + 'A'.charCodeAt(0));
+                }
+                result += char;
+            }
+            return result;
+        }
+
+        function caesarDecrypt(text, shift) {
+            let result = "";
+            shift = parseInt(shift);
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
+                if (char >= 'a' && char <= 'z') {
+                    char = String.fromCharCode(((char.charCodeAt(0) - 'a'.charCodeAt(0) - shift + 26) % 26) + 'a'.charCodeAt(0));
+                } else if (char >= 'A' && char <= 'Z') {
+                    char = String.fromCharCode(((char.charCodeAt(0) - 'A'.charCodeAt(0) - shift + 26) % 26) + 'A'.charCodeAt(0));
+                }
+                result += char;
+            }
+            return result;
+        }
+
+        // Vigenere şifreleme
+        function vigenereEncrypt(plaintext, key) {
+            key = key.toLowerCase();
+            let result = "";
+            let keyIndex = 0;
+            
+            for (let i = 0; i < plaintext.length; i++) {
+                let char = plaintext[i];
+                if (char.match(/[a-zA-Z]/)) {
+                    let base = char === char.toUpperCase() ? 'A' : 'a';
+                    let shift = key.charCodeAt(keyIndex % key.length) - 'a'.charCodeAt(0);
+                    char = String.fromCharCode(((char.charCodeAt(0) - base.charCodeAt(0) + shift) % 26) + base.charCodeAt(0));
+                    keyIndex++;
+                }
+                result += char;
+            }
+            return result;
+        }
+
+        function vigenereDecrypt(ciphertext, key) {
+            key = key.toLowerCase();
+            let result = "";
+            let keyIndex = 0;
+            
+            for (let i = 0; i < ciphertext.length; i++) {
+                let char = ciphertext[i];
+                if (char.match(/[a-zA-Z]/)) {
+                    let base = char === char.toUpperCase() ? 'A' : 'a';
+                    let shift = key.charCodeAt(keyIndex % key.length) - 'a'.charCodeAt(0);
+                    char = String.fromCharCode(((char.charCodeAt(0) - base.charCodeAt(0) - shift + 26) % 26) + base.charCodeAt(0));
+                    keyIndex++;
+                }
+                result += char;
+            }
+            return result;
+        }
+
+        // XOR şifreleme
+        function xorEncrypt(plaintext, key) {
+            const textBytes = new TextEncoder().encode(plaintext);
+            const keyBytes = new TextEncoder().encode(key);
+            const encrypted = new Uint8Array(textBytes.length);
+            
+            for (let i = 0; i < textBytes.length; i++) {
+                encrypted[i] = textBytes[i] ^ keyBytes[i % keyBytes.length];
+            }
+            
+            return btoa(String.fromCharCode(...encrypted));
+        }
+
+        function xorDecrypt(ciphertext, key) {
+            try {
+                const encrypted = atob(ciphertext);
+                const keyBytes = new TextEncoder().encode(key);
+                const decrypted = new Uint8Array(encrypted.length);
+                
+                for (let i = 0; i < encrypted.length; i++) {
+                    decrypted[i] = encrypted.charCodeAt(i) ^ keyBytes[i % keyBytes.length];
+                }
+                
+                return new TextDecoder().decode(decrypted);
+            } catch (error) {
+                throw new Error('Geçersiz şifreli metin: ' + error.message);
+            }
+        }
+
+        // Playfair şifreleme/çözme
+        function buildPlayfairMatrix(key) {
+            key = key.toUpperCase().replace(/J/g, 'I').replace(/[^A-Z]/g, '');
+            const seen = new Set();
+            let matrixStr = '';
+            for (const ch of key + 'ABCDEFGHIKLMNOPQRSTUVWXYZ') {
+                if (!seen.has(ch)) {
+                    seen.add(ch);
+                    matrixStr += ch;
+                }
+            }
+            const matrix = [];
+            for (let i = 0; i < 5; i++) {
+                matrix.push(matrixStr.slice(i * 5, i * 5 + 5).split(''));
+            }
+            const pos = {};
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 5; c++) {
+                    pos[matrix[r][c]] = { r, c };
+                }
+            }
+            return { matrix, pos };
+        }
+
+        function playfairPrepare(text) {
+            let clean = text.toUpperCase().replace(/J/g, 'I').replace(/[^A-Z]/g, '');
+            let pairs = [];
+            for (let i = 0; i < clean.length; i += 2) {
+                let a = clean[i];
+                let b = clean[i + 1];
+                if (!b) {
+                    b = 'X';
+                } else if (a === b) {
+                    b = 'X';
+                    i--;
+                }
+                pairs.push([a, b]);
+            }
+            return pairs;
+        }
+
+        function playfairEncrypt(text, key) {
+            const { matrix, pos } = buildPlayfairMatrix(key);
+            const pairs = playfairPrepare(text);
+            let result = '';
+            for (const [a, b] of pairs) {
+                const pa = pos[a], pb = pos[b];
+                if (pa.r === pb.r) {
+                    result += matrix[pa.r][(pa.c + 1) % 5];
+                    result += matrix[pb.r][(pb.c + 1) % 5];
+                } else if (pa.c === pb.c) {
+                    result += matrix[(pa.r + 1) % 5][pa.c];
+                    result += matrix[(pb.r + 1) % 5][pb.c];
+                } else {
+                    result += matrix[pa.r][pb.c];
+                    result += matrix[pb.r][pa.c];
+                }
+            }
+            return result;
+        }
+
+        function playfairDecrypt(text, key) {
+            const { matrix, pos } = buildPlayfairMatrix(key);
+            let clean = text.toUpperCase().replace(/[^A-Z]/g, '').replace(/J/g, 'I');
+            let pairs = [];
+            for (let i = 0; i < clean.length; i += 2) {
+                pairs.push([clean[i], clean[i + 1]]);
+            }
+            let result = '';
+            for (const [a, b] of pairs) {
+                const pa = pos[a], pb = pos[b];
+                if (pa.r === pb.r) {
+                    result += matrix[pa.r][(pa.c + 4) % 5];
+                    result += matrix[pb.r][(pb.c + 4) % 5];
+                } else if (pa.c === pb.c) {
+                    result += matrix[(pa.r + 4) % 5][pa.c];
+                    result += matrix[(pb.r + 4) % 5][pb.c];
+                } else {
+                    result += matrix[pa.r][pb.c];
+                    result += matrix[pb.r][pa.c];
+                }
+            }
+            return result;
+        }
+
+        // Rail Fence şifreleme/çözme
+        function railFenceEncrypt(text, rails) {
+            rails = parseInt(rails);
+            if (rails < 2) throw new Error('Katman sayısı en az 2 olmalı');
+            const fence = Array.from({ length: rails }, () => []);
+            let dir = 1, r = 0;
+            for (const ch of text) {
+                fence[r].push(ch);
+                if (r === 0) dir = 1;
+                else if (r === rails - 1) dir = -1;
+                r += dir;
+            }
+            return fence.flat().join('');
+        }
+
+        function railFenceDecrypt(cipher, rails) {
+            rails = parseInt(rails);
+            if (rails < 2) throw new Error('Katman sayısı en az 2 olmalı');
+            const len = cipher.length;
+            const pattern = [];
+            let dir = 1, r = 0;
+            for (let i = 0; i < len; i++) {
+                pattern.push(r);
+                if (r === 0) dir = 1;
+                else if (r === rails - 1) dir = -1;
+                r += dir;
+            }
+            const counts = Array(rails).fill(0);
+            pattern.forEach(p => counts[p]++);
+            const rows = [];
+            let idx = 0;
+            for (let i = 0; i < rails; i++) {
+                rows[i] = cipher.slice(idx, idx + counts[i]).split('');
+                idx += counts[i];
+            }
+            const pointers = Array(rails).fill(0);
+            let result = '';
+            for (const p of pattern) {
+                result += rows[p][pointers[p]++];
+            }
+            return result;
+        }
+
+        // Route cipher (spiral okuma)
+        function routeCipherEncrypt(text) {
+            const clean = text.replace(/\s+/g, '');
+            const size = Math.ceil(Math.sqrt(clean.length));
+            const matrix = Array.from({ length: size }, () => Array(size).fill('X'));
+            let idx = 0;
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    matrix[r][c] = clean[idx++] || 'X';
+                }
+            }
+            const res = [];
+            let top = 0, bottom = size - 1, left = 0, right = size - 1;
+            while (top <= bottom && left <= right) {
+                for (let c = left; c <= right; c++) res.push(matrix[top][c]);
+                top++;
+                for (let r = top; r <= bottom; r++) res.push(matrix[r][right]);
+                right--;
+                if (top <= bottom) {
+                    for (let c = right; c >= left; c--) res.push(matrix[bottom][c]);
+                    bottom--;
+                }
+                if (left <= right) {
+                    for (let r = bottom; r >= top; r--) res.push(matrix[r][left]);
+                    left++;
+                }
+            }
+            return res.join('');
+        }
+
+        function routeCipherDecrypt(cipher) {
+            const size = Math.ceil(Math.sqrt(cipher.length));
+            const matrix = Array.from({ length: size }, () => Array(size).fill(''));
+            let top = 0, bottom = size - 1, left = 0, right = size - 1;
+            let idx = 0;
+            while (top <= bottom && left <= right) {
+                for (let c = left; c <= right; c++) matrix[top][c] = cipher[idx++];
+                top++;
+                for (let r = top; r <= bottom; r++) matrix[r][right] = cipher[idx++];
+                right--;
+                if (top <= bottom) {
+                    for (let c = right; c >= left; c--) matrix[bottom][c] = cipher[idx++];
+                    bottom--;
+                }
+                if (left <= right) {
+                    for (let r = bottom; r >= top; r--) matrix[r][left] = cipher[idx++];
+                    left++;
+                }
+            }
+            let res = '';
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    res += matrix[r][c];
+                }
+            }
+            return res.replace(/X+$/g, '');
+        }
+
+        // Columnar transposition
+        function columnarEncrypt(text, key) {
+            const clean = text.replace(/\s+/g, '');
+            const cols = key.length;
+            const rows = Math.ceil(clean.length / cols);
+            const grid = Array.from({ length: rows }, () => Array(cols).fill('X'));
+            let idx = 0;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (idx < clean.length) grid[r][c] = clean[idx++];
+                }
+            }
+            const order = key.split('').map((ch, i) => ({ ch, i }))
+                .sort((a, b) => a.ch.localeCompare(b.ch) || a.i - b.i)
+                .map(item => item.i);
+            let res = '';
+            for (const c of order) {
+                for (let r = 0; r < rows; r++) {
+                    res += grid[r][c];
+                }
+            }
+            return res;
+        }
+
+        function columnarDecrypt(cipher, key) {
+            const cols = key.length;
+            const rows = Math.ceil(cipher.length / cols);
+            const order = key.split('').map((ch, i) => ({ ch, i }))
+                .sort((a, b) => a.ch.localeCompare(b.ch) || a.i - b.i)
+                .map(item => item.i);
+            const grid = Array.from({ length: rows }, () => Array(cols).fill(''));
+            let idx = 0;
+            for (const c of order) {
+                for (let r = 0; r < rows; r++) {
+                    grid[r][c] = cipher[idx++];
+                }
+            }
+            let res = '';
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    res += grid[r][c];
+                }
+            }
+            return res.replace(/X+$/g, '');
+        }
+
+        // Polybius cipher
+        function buildPolybiusMaps(key) {
+            const cleanKey = (key || 'ABCDEFGHIKLMNOPQRSTUVWXYZ').toUpperCase().replace(/J/g, '').replace(/[^A-Z]/g, '');
+            const seen = new Set();
+            let alphabet = '';
+            for (const ch of cleanKey + 'ABCDEFGHIKLMNOPQRSTUVWXYZ') {
+                if (ch !== 'J' && !seen.has(ch)) {
+                    seen.add(ch);
+                    alphabet += ch;
+                }
+            }
+            const enc = {}, dec = {};
+            for (let i = 0; i < 25; i++) {
+                const r = Math.floor(i / 5) + 1;
+                const c = (i % 5) + 1;
+                const code = `${r}${c}`;
+                enc[alphabet[i]] = code;
+                dec[code] = alphabet[i];
+            }
+            return { enc, dec };
+        }
+
+        function polybiusEncrypt(text, key) {
+            const { enc } = buildPolybiusMaps(key);
+            let res = '';
+            for (const ch of text.toUpperCase()) {
+                if (ch === 'J') {
+                    res += enc['I'];
+                } else if (enc[ch]) {
+                    res += enc[ch];
+                } else if (ch.match(/[0-9]/)) {
+                    res += ch; // sayıları geç
+                }
+            }
+            return res;
+        }
+
+        function polybiusDecrypt(cipher, key) {
+            const { dec } = buildPolybiusMaps(key);
+            let res = '';
+            for (let i = 0; i < cipher.length; i += 2) {
+                const pair = cipher.slice(i, i + 2);
+                res += dec[pair] || '';
+            }
+            return res;
+        }
+
+        // Pigpen (basit metin eşlemeli)
+        const pigpenMap = {
+            A: 'A1', B: 'A2', C: 'A3', D: 'A4', E: 'A5', F: 'A6',
+            G: 'B1', H: 'B2', I: 'B3', J: 'B3', K: 'B4', L: 'B5', M: 'B6',
+            N: 'C1', O: 'C2', P: 'C3', Q: 'C4', R: 'C5', S: 'C6',
+            T: 'D1', U: 'D2', V: 'D3', W: 'D4', X: 'D5', Y: 'D6', Z: 'E1'
+        };
+        const pigpenReverse = Object.fromEntries(Object.entries(pigpenMap).map(([k, v]) => [v, k === 'J' ? 'I' : k]));
+
+        function pigpenEncrypt(text) {
+            let res = '';
+            for (const ch of text.toUpperCase()) {
+                if (pigpenMap[ch]) {
+                    res += pigpenMap[ch] + ' ';
+                }
+            }
+            return res.trim();
+        }
+
+        function pigpenDecrypt(cipher) {
+            return cipher.split(/\s+/).map(token => pigpenReverse[token] || '').join('');
+        }
+
+        // Hill cipher (3x3)
+        function parseHillKey(keyStr) {
+            const rows = keyStr.trim().split(';').map(r => r.split(',').map(n => ((parseInt(n) % 26) + 26) % 26));
+            if (rows.length !== 3 || rows.some(r => r.length !== 3)) throw new Error('3x3 matris girilmeli');
+            return rows;
+        }
+
+        function modInverse(a, m) {
+            a = ((a % m) + m) % m;
+            for (let x = 1; x < m; x++) {
+                if ((a * x) % m === 1) return x;
+            }
+            throw new Error('Ters eleman yok');
+        }
+
+        function invertMatrix3(mat) {
+            const det = (
+                mat[0][0] * (mat[1][1] * mat[2][2] - mat[1][2] * mat[2][1]) -
+                mat[0][1] * (mat[1][0] * mat[2][2] - mat[1][2] * mat[2][0]) +
+                mat[0][2] * (mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0])
+            );
+            const detInv = modInverse(det, 26);
+            const adj = [
+                [
+                    (mat[1][1] * mat[2][2] - mat[1][2] * mat[2][1]),
+                    -(mat[0][1] * mat[2][2] - mat[0][2] * mat[2][1]),
+                    (mat[0][1] * mat[1][2] - mat[0][2] * mat[1][1])
+                ],
+                [
+                    -(mat[1][0] * mat[2][2] - mat[1][2] * mat[2][0]),
+                    (mat[0][0] * mat[2][2] - mat[0][2] * mat[2][0]),
+                    -(mat[0][0] * mat[1][2] - mat[0][2] * mat[1][0])
+                ],
+                [
+                    (mat[1][0] * mat[2][1] - mat[1][1] * mat[2][0]),
+                    -(mat[0][0] * mat[2][1] - mat[0][1] * mat[2][0]),
+                    (mat[0][0] * mat[1][1] - mat[0][1] * mat[1][0])
+                ]
+            ];
+            const inv = adj.map(row => row.map(v => ((v * detInv) % 26 + 26) % 26));
+            return inv;
+        }
+
+        function hillProcess(text, keyMat) {
+            let clean = text.toUpperCase().replace(/[^A-Z]/g, '').replace(/J/g, 'I');
+            while (clean.length % 3 !== 0) clean += 'X';
+            let res = '';
+            for (let i = 0; i < clean.length; i += 3) {
+                const vec = [clean.charCodeAt(i) - 65, clean.charCodeAt(i + 1) - 65, clean.charCodeAt(i + 2) - 65];
+                const out = [];
+                for (let r = 0; r < 3; r++) {
+                    out[r] = (keyMat[r][0] * vec[0] + keyMat[r][1] * vec[1] + keyMat[r][2] * vec[2]) % 26;
+                }
+                res += String.fromCharCode(out[0] + 65, out[1] + 65, out[2] + 65);
+            }
+            return res;
+        }
+
+        function hillEncrypt(text, keyStr) {
+            const key = parseHillKey(keyStr);
+            return hillProcess(text, key);
+        }
+
+        function hillDecrypt(cipher, keyStr) {
+            const key = parseHillKey(keyStr);
+            const inv = invertMatrix3(key);
+            return hillProcess(cipher, inv);
+        }
+
+        // Mesaj gönder
+        function sendMessage() {
+            const method = document.getElementById('method').value;
+            const key = document.getElementById('key').value;
+            const message = document.getElementById('message').value;
+
+            if (!message.trim()) {
+                alert('Mesaj boş olamaz!');
+                return;
+            }
+
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('WebSocket bağlantısı yok!');
+                return;
+            }
+
+            // İstemcide şifrele
+            let encrypted = null;
+            try {
+                if (method === 'caesar') {
+                    encrypted = caesarEncrypt(message, key);
+                } else if (method === 'vigenere') {
+                    encrypted = vigenereEncrypt(message, key);
+                } else if (method === 'xor') {
+                    encrypted = xorEncrypt(message, key);
+                } else if (method === 'playfair') {
+                    encrypted = playfairEncrypt(message, key);
+                } else if (method === 'railfence') {
+                    encrypted = railFenceEncrypt(message, key);
+                } else if (method === 'route') {
+                    encrypted = routeCipherEncrypt(message);
+                } else if (method === 'columnar') {
+                    encrypted = columnarEncrypt(message, key);
+                } else if (method === 'polybius') {
+                    encrypted = polybiusEncrypt(message, key);
+                } else if (method === 'pigpen') {
+                    encrypted = pigpenEncrypt(message);
+                } else if (method === 'hill') {
+                    encrypted = hillEncrypt(message, key);
+                }
+            } catch (error) {
+                showError('Şifreleme hatası: ' + error.message);
+                return;
+            }
+
+            // Sunucuya gönder
+            const packet = {
+                message: encrypted,
+                method: method,
+                key: method === 'caesar' ? parseInt(key) : key
+            };
+
+            ws.send(JSON.stringify(packet));
+
+            // Sonuçları göster
+            showResults(encrypted, null);
+        }
+
+        // Sunucu yanıtını işle
+        function handleServerResponse(data) {
+            try {
+                const response = JSON.parse(data);
+                const method = document.getElementById('method').value;
+                const key = document.getElementById('key').value;
+
+                if (response.error) {
+                    showError(response.message);
+                    return;
+                }
+
+                // Sunucudan gelen şifreli mesajı deşifre et
+                let decrypted = null;
+                if (method === 'caesar') {
+                    decrypted = caesarDecrypt(response.message, key);
+                } else if (method === 'vigenere') {
+                    decrypted = vigenereDecrypt(response.message, key);
+                } else if (method === 'xor') {
+                    decrypted = xorDecrypt(response.message, key);
+                } else if (method === 'playfair') {
+                    decrypted = playfairDecrypt(response.message, key);
+                } else if (method === 'railfence') {
+                    decrypted = railFenceDecrypt(response.message, key);
+                } else if (method === 'route') {
+                    decrypted = routeCipherDecrypt(response.message);
+                } else if (method === 'columnar') {
+                    decrypted = columnarDecrypt(response.message, key);
+                } else if (method === 'polybius') {
+                    decrypted = polybiusDecrypt(response.message, key);
+                } else if (method === 'pigpen') {
+                    decrypted = pigpenDecrypt(response.message);
+                } else if (method === 'hill') {
+                    decrypted = hillDecrypt(response.message, key);
+                }
+
+                showResults(null, response.message, decrypted);
+            } catch (error) {
+                showError('Yanıt işleme hatası: ' + error.message);
+            }
+        }
+
+        // Sonuçları göster
+        function showResults(clientEncrypted, serverEncrypted, serverDecrypted) {
+            const resultsDiv = document.getElementById('results');
+            let html = '<div class="result-section">';
+            
+            if (clientEncrypted) {
+                html += '<div class="result-box"><h3>🔒 İstemcide Şifrelendi:</h3><div class="result-text">' + clientEncrypted + '</div></div>';
+            }
+            
+            if (serverEncrypted) {
+                html += '<div class="result-box"><h3>📥 Sunucudan Şifreli Cevap:</h3><div class="result-text">' + serverEncrypted + '</div></div>';
+            }
+            
+            if (serverDecrypted) {
+                html += '<div class="result-box"><h3>✅ İstemcide Deşifrelendi:</h3><div class="result-text">' + serverDecrypted + '</div></div>';
+            }
+            
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        // Hata göster
+        function showError(message) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="error-box">❌ ' + message + '</div>';
+        }
+
+        // Anahtar label güncelle
+        document.getElementById('method').addEventListener('change', function() {
+            const method = this.value;
+            const keyLabel = document.getElementById('keyLabel');
+            const keyInput = document.getElementById('key');
+            
+            if (method === 'caesar') {
+                keyLabel.textContent = 'Anahtar (Kaydırma Sayısı)';
+                keyInput.value = '3';
+                keyInput.placeholder = 'Örn: 3';
+            } else if (method === 'vigenere') {
+                keyLabel.textContent = 'Anahtar (Kelime)';
+                keyInput.value = 'KEY';
+                keyInput.placeholder = 'Örn: ANAHTAR';
+            } else if (method === 'xor') {
+                keyLabel.textContent = 'Anahtar (Gizli Sözcük)';
+                keyInput.value = 'secret';
+                keyInput.placeholder = 'Örn: secret';
+            } else if (method === 'playfair') {
+                keyLabel.textContent = 'Anahtar (Playfair Matrisi)';
+                keyInput.value = 'MONARCHY';
+                keyInput.placeholder = 'Örn: MONARCHY';
+            } else if (method === 'railfence') {
+                keyLabel.textContent = 'Anahtar (Katman Sayısı)';
+                keyInput.value = '3';
+                keyInput.placeholder = 'Örn: 3';
+            } else if (method === 'route') {
+                keyLabel.textContent = 'Anahtar (Yol Tanımı)';
+                keyInput.value = 'spiral';
+                keyInput.placeholder = 'Örn: spiral';
+            } else if (method === 'columnar') {
+                keyLabel.textContent = 'Anahtar (Sütun Anahtarı)';
+                keyInput.value = 'KEYWORD';
+                keyInput.placeholder = 'Örn: KEYWORD';
+            } else if (method === 'polybius') {
+                keyLabel.textContent = 'Anahtar (Polybius Kare Anahtarı)';
+                keyInput.value = 'ABCDEFGHIKLMNOPQRSTUVWXYZ';
+                keyInput.placeholder = '25 harfli kare';
+            } else if (method === 'pigpen') {
+                keyLabel.textContent = 'Anahtar (Opsiyonel)';
+                keyInput.value = '';
+                keyInput.placeholder = 'Anahtar gerekmiyor';
+            } else if (method === 'hill') {
+                keyLabel.textContent = 'Anahtar (Matris)';
+                keyInput.value = '3x3 matris';
+                keyInput.placeholder = 'Örn: 6,24,1;13,16,10;20,17,15';
+            }
+        });
+
+        // Sayfa yüklendiğinde bağlan
+        console.log('📄 Sayfa yüklendi, WebSocket bağlantısı başlatılıyor...');
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('✅ DOM yüklendi');
+                connect();
+            });
+        } else {
+            console.log('✅ DOM zaten yüklü');
+            connect();
+        }
+    </script>
+</body>
+</html>
+

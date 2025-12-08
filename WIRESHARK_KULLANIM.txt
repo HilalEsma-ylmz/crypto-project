@@ -1,0 +1,84 @@
+=================================================================
+  WIRESHARK'TTA MESAJLARI NASIL GÖRECEKSİNİZ?
+=================================================================
+
+SORUN: Wireshark'ta 5000 portunda mesaj görünmüyor
+AMA: Backend'e mesaj gidiyor (çalışıyor)
+
+SEBEPLER:
+
+1. ✅ OLASI SEBEP: Yanlış Ağ Kartı Seçilmiş
+   
+   ÇÖZÜM:
+   - Wireshark'ı aç → Capture → Options
+   - Hangi ağ kartına bağlısınız?
+     * Wi-Fi kullanıyorsanız → Wireless adaptör seç
+     * Ethernet kullanıyorsanız → Ethernet adaptör seç
+     * Yani GERÇEK AĞ KARTINI seç!
+   
+2. ✅ OLASI SEBEP: Filtre Yanlış
+   
+   Wireshark'a filtre uygulayın:
+   
+   Filtre 1: tcp.port == 5000
+   
+   Filtre 2: ip.addr == 172.17.9.60 && tcp.port == 5000
+   
+   Filtre 3: ip.src == 172.17.9.60 || ip.dst == 172.17.9.60
+   
+3. ✅ OLASI SEBEP: Test Sayfası localhost Kullanıyor
+   
+   Eğer test.html'de ws://localhost yazıyorsa, 
+   mesajlar LOOPBACK üzerinden gitmez (gerçek ağ kartından gitmez)
+   
+   ÇÖZÜM: test.html'de zaten 172.17.9.60 kullanıyoruz ✅
+
+4. ✅ OLASI SEBEP: Capture Başlamadı
+   
+   Wireshark'ta "Start capturing packets" (mavi balık ikonu) 
+   butonuna tıkladınız mı?
+
+=================================================================
+  ADIM ADIM NE YAPMALI?
+=================================================================
+
+1. Backend'i başlatın:
+   cd backend\routes
+   python server.py
+
+2. Wireshark'ı açın
+
+3. Doğru ağ kartını seçin:
+   - Capture → Options
+   - Wi-Fi VEYA Ethernet kartını işaretleyin
+   - "Start capturing packets"
+
+4. Filtre uygulayın:
+   tcp.port == 5000
+
+5. test.html sayfasını açın
+
+6. Mesaj gönderin
+
+7. Wireshark'ta paketleri görün:
+   - SYN paketleri (bağlantı kurma)
+   - HTTP Upgrade (WebSocket upgrade)
+   - Data paketleri (mesajlar)
+
+=================================================================
+  ALTERNATİF: TARAYICI DEVELOPER TOOLS
+=================================================================
+
+Wireshark çalışmıyorsa:
+1. test.html sayfasını açın
+2. F12 basın
+3. Network sekmesi
+4. WS filtresi uygulayın
+5. Mesaj gönderin
+6. Burada DAHA KOLAY görebilirsiniz!
+
+=================================================================
+
+
+
+

@@ -13,6 +13,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from algorithms.caesar import encrypt as caesar_encrypt, decrypt as caesar_decrypt
 from algorithms.vigenere import encrypt as vigenere_encrypt, decrypt as vigenere_decrypt
 from algorithms.xor_cipher import encrypt as xor_encrypt, decrypt as xor_decrypt
+from algorithms.playfair import encrypt as playfair_encrypt, decrypt as playfair_decrypt
+from algorithms.railfence import encrypt as rail_encrypt, decrypt as rail_decrypt
+from algorithms.route_cipher import encrypt as route_encrypt, decrypt as route_decrypt
+from algorithms.columnar import encrypt as columnar_encrypt, decrypt as columnar_decrypt
+from algorithms.polybius import encrypt as polybius_encrypt, decrypt as polybius_decrypt
+from algorithms.pigpen import encrypt as pigpen_encrypt, decrypt as pigpen_decrypt
+from algorithms.hill import encrypt as hill_encrypt, decrypt as hill_decrypt
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -25,6 +32,13 @@ DEFAULT_METHOD = 'caesar'
 DEFAULT_SHIFT = 3
 DEFAULT_VIGENERE_KEY = 'SECRET'
 DEFAULT_XOR_KEY = 'KEY'
+DEFAULT_PLAYFAIR_KEY = 'MONARCHY'
+DEFAULT_RAILS = 3
+DEFAULT_ROUTE = 'spiral'
+DEFAULT_COLUMNAR = 'KEYWORD'
+DEFAULT_POLYBIUS = 'ABCDEFGHIKLMNOPQRSTUVWXYZ'
+DEFAULT_PIGPEN = ''
+DEFAULT_HILL = '6,24,1;13,16,10;20,17,15'
 
 def encrypt_message(message, method, key):
     """Mesajı şifrele"""
@@ -37,6 +51,25 @@ def encrypt_message(message, method, key):
     elif method == 'xor':
         params = {"key": key}
         return xor_encrypt(message, params)
+    elif method == 'playfair':
+        params = {"key": key or DEFAULT_PLAYFAIR_KEY}
+        return playfair_encrypt(message, params)
+    elif method == 'railfence':
+        params = {"rails": key or DEFAULT_RAILS}
+        return rail_encrypt(message, params)
+    elif method == 'route':
+        return route_encrypt(message, {})
+    elif method == 'columnar':
+        params = {"key": key or DEFAULT_COLUMNAR}
+        return columnar_encrypt(message, params)
+    elif method == 'polybius':
+        params = {"key": key or DEFAULT_POLYBIUS}
+        return polybius_encrypt(message, params)
+    elif method == 'pigpen':
+        return pigpen_encrypt(message, {})
+    elif method == 'hill':
+        params = {"key": key or DEFAULT_HILL}
+        return hill_encrypt(message, params)
     else:
         raise ValueError(f"Bilinmeyen şifreleme yöntemi: {method}")
 
@@ -51,6 +84,25 @@ def decrypt_message(message, method, key):
     elif method == 'xor':
         params = {"key": key}
         return xor_decrypt(message, params)
+    elif method == 'playfair':
+        params = {"key": key or DEFAULT_PLAYFAIR_KEY}
+        return playfair_decrypt(message, params)
+    elif method == 'railfence':
+        params = {"rails": key or DEFAULT_RAILS}
+        return rail_decrypt(message, params)
+    elif method == 'route':
+        return route_decrypt(message, {})
+    elif method == 'columnar':
+        params = {"key": key or DEFAULT_COLUMNAR}
+        return columnar_decrypt(message, params)
+    elif method == 'polybius':
+        params = {"key": key or DEFAULT_POLYBIUS}
+        return polybius_decrypt(message, params)
+    elif method == 'pigpen':
+        return pigpen_decrypt(message, {})
+    elif method == 'hill':
+        params = {"key": key or DEFAULT_HILL}
+        return hill_decrypt(message, params)
     else:
         raise ValueError(f"Bilinmeyen şifreleme yöntemi: {method}")
 
@@ -58,13 +110,37 @@ def decrypt_message(message, method, key):
 def index():
     return "Crypto Project Sunucusu Çalışıyor"
 
+@app.route('/test')
+def test_page():
+    """test.html dosyasını servis et"""
+    import os
+    test_file_path = os.path.join(os.path.dirname(__file__), '..', '..', 'test.html')
+    if os.path.exists(test_file_path):
+        with open(test_file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return "test.html dosyası bulunamadı", 404
+
 @sock.route('/ws')
 def websocket(ws):
     client_addr = ws.environ.get('REMOTE_ADDR', 'Unknown')
     logger.info(f"✅ İstemci bağlandı: {client_addr}")
     print(f"\n{'=' * 60}")
     print(f"✅ YENİ BAĞLANTI: {client_addr}")
+    print(f"   WebSocket objesi: {type(ws)}")
+    print(f"   Environ: {ws.environ.get('HTTP_HOST', 'N/A')}")
     print(f"{'=' * 60}\n")
+    
+    # Bağlantı kurulduğunda hoş geldin mesajı gönder
+    try:
+        welcome_msg = json.dumps({
+            "type": "connection",
+            "message": "Bağlantı kuruldu",
+            "status": "connected"
+        })
+        ws.send(welcome_msg)
+        print(f"📤 Hoş geldin mesajı gönderildi")
+    except Exception as e:
+        print(f"⚠️ Hoş geldin mesajı gönderilemedi: {e}")
 
     try:
         while True:
@@ -98,10 +174,27 @@ def websocket(ws):
                     else:
                         key = str(key)
                 elif method == 'xor':
+                    key = str(key or DEFAULT_XOR_KEY)
+                elif method == 'playfair':
+                    key = str(key or DEFAULT_PLAYFAIR_KEY)
+                elif method == 'railfence':
                     if key is None:
-                        key = DEFAULT_XOR_KEY
+                        key = DEFAULT_RAILS
                     else:
-                        key = str(key)
+                        try:
+                            key = int(key) if isinstance(key, str) else int(key)
+                        except (ValueError, TypeError):
+                            key = DEFAULT_RAILS
+                elif method == 'route':
+                    key = DEFAULT_ROUTE  # kullanılmıyor ama tutarlı olsun
+                elif method == 'columnar':
+                    key = str(key or DEFAULT_COLUMNAR)
+                elif method == 'polybius':
+                    key = str(key or DEFAULT_POLYBIUS)
+                elif method == 'pigpen':
+                    key = DEFAULT_PIGPEN
+                elif method == 'hill':
+                    key = str(key or DEFAULT_HILL)
 
                 print(f"🔐 Şifreleme Yöntemi: {method}")
                 print(f"🔑 Anahtar: {key}")
@@ -117,7 +210,7 @@ def websocket(ws):
                     decrypted = f"[HATA] {str(e)}"
 
                 # İşle
-                processed = decrypted + " (sunucuda işlendi)"
+                processed = decrypted + " (processed on server)"
                 print(f"🔄 İşlenen Mesaj: {processed}")
 
                 # Aynı yönteme göre şifrele
@@ -162,5 +255,21 @@ def websocket(ws):
         logger.error(f"❌ Bağlantı Hatası: {e}", exc_info=True)
         print(f"❌ HATA: {e}\n")
 
+@app.route('/health')
+def health_check():
+    """Sağlık kontrolü endpoint'i"""
+    return json.dumps({
+        "status": "ok",
+        "websocket_endpoint": "/ws",
+        "message": "Sunucu çalışıyor"
+    }), 200, {'Content-Type': 'application/json'}
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, port=5000, use_reloader=False)
+    print("\n" + "="*60)
+    print("🚀 CRYPTO PROJECT SERVER BAŞLATILIYOR")
+    print("="*60)
+    print("📡 WebSocket Endpoint: ws://localhost:5000/ws")
+    print("🌐 Test Sayfası: http://localhost:5000/test")
+    print("💚 Health Check: http://localhost:5000/health")
+    print("="*60 + "\n")
+    app.run(host='0.0.0.0', debug=True, port=5000, use_reloader=False, threaded=True)

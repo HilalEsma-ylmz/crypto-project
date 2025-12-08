@@ -1,0 +1,45 @@
+=================================================================
+  PATH'E NODE.JS EKLEME - DOĞRU YOL
+=================================================================
+
+YANLIŞ YOL: C:\Program Files\nodejs\node_modules\npm\bin
+DOĞRU YOL: C:\Program Files\nodejs\
+
+=================================================================
+  ADIM ADIM NASIL EKLEYECEKSİNİZ?
+=================================================================
+
+1. WINDOWS TUŞU + "environment" yazın
+   veya
+   Windows tuşu + R → sysdm.cpl → Advanced sekmesi → Environment Variables
+
+2. "Path" değişkenini seçin (System variables bölümünde)
+
+3. "Edit" butonuna tıklayın
+
+4. "New" butonuna tıklayın
+
+5. Şu yolu ekleyin:
+   C:\Program Files\nodejs\
+
+6. "OK" tüm pencereleri kapatın
+
+7. PowerShell'i KAPATIN VE YENİDEN AÇIN
+
+8. Şu komutları test edin:
+   node --version
+   npm --version
+
+=================================================================
+  ALTERNATİF: KOLAY YÖNTEM
+=================================================================
+
+PowerShell'i KAPAT ve YENİ AÇ!
+Node.js kurulumu sırasında PATH'e ekleme yapılıyor olmalı.
+Yeni PowerShell penceresinde direkt çalışmalı.
+
+=================================================================
+
+
+
+
