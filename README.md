@@ -1,155 +1,135 @@
-# 🔐 Şifreleme ve Deşifreleme Sistemi
+# Crypto Chat - Şifreli Mesajlaşma Uygulaması
 
-Flask backend ve React frontend ile WebSocket destekli şifreleme/deşifreleme uygulaması.
+Güvenli, şifreli mesajlaşma uygulaması. Python Flask backend ve WebSocket ile gerçek zamanlı mesajlaşma sağlar.
 
-## 🚀 Özellikler
+## Özellikler
 
-- **3 Farklı Şifreleme Algoritması**: Caesar, Vigenere ve XOR
-- **WebSocket ile Gerçek Zamanlı İletişim**: İstemci ve sunucu arasında anlık mesajlaşma
-- **Hem İstemcide Hem Sunucuda Şifreleme**: 
-  - İstemci mesajı şifreler
-  - Sunucuya gönderir
-  - Sunucu mesajı deşifre eder
-  - Sunucu yeni mesajı şifreler ve geri gönderir
-  - İstemci gelen mesajı deşifre eder
-- **Modern ve Responsive Arayüz**: Güzel bir UI ile kullanım
+### Şifreleme Algoritmaları
 
-## 📋 Gereksinimler
+#### Simetrik Şifreleme (Mesaj Şifreleme)
+- **AES** (Advanced Encryption Standard)
+- **DES** (Data Encryption Standard)
+- **Uygulama Yöntemleri**:
+  - **Kütüphaneli**: Güvenilir kriptografi kütüphaneleri kullanarak
+  - **Manuel**: Eğitim amaçlı basitleştirilmiş implementasyonlar
 
-- Python 3.8+
-- Node.js 18+
-- pip
-- npm veya yarn
+#### Asimetrik Anahtar Dağıtımı
+- **RSA** (Rivest-Shamir-Adleman) - Sadece kütüphaneli
+- **ECC** (Elliptic Curve Cryptography) - Sadece kütüphaneli
+- **Not**: Asimetrik şifreleme sadece anahtar dağıtımı için kullanılır ve her zaman kütüphaneli implementasyon kullanır
 
-## 🔧 Kurulum
-
-### Backend
-
-1. Backend dizinine gidin:
-```bash
-cd backend
-```
-
-2. Virtual environment oluşturun ve etkinleştirin:
-```bash
-# Windows
-venv\Scripts\activate
-
-# Linux/Mac
-source venv/bin/activate
-```
-
-3. Gerekli paketleri yükleyin:
-```bash
-pip install -r requirements.txt
-```
-
-### Frontend
-
-1. Frontend dizinine gidin:
-```bash
-cd frontend
-```
-
-2. Bağımlılıkları yükleyin:
-```bash
-npm install
-```
-
-## ▶️ Çalıştırma
-
-### Backend Sunucusu
-
-Backend'i çalıştırmak için:
-
-```bash
-cd backend
-python routes/server.py
-```
-
-Sunucu `http://localhost:5000` adresinde çalışacak.
-
-### Frontend Uygulaması
-
-Frontend'i çalıştırmak için:
-
-```bash
-cd frontend
-npm run dev
-```
-
-Uygulama `http://localhost:3000` adresinde çalışacak.
-
-## 🎯 Kullanım
-
-1. Tarayıcınızda `http://localhost:3000` adresine gidin
-2. Şifreleme yöntemini seçin (Caesar, Vigenere veya XOR)
-3. Anahtarı girin (yönteme göre değişir)
-4. Mesajınızı yazın
-5. "Gönder" butonuna tıklayın
-
-### Şifreleme Yöntemleri
-
-#### Caesar Cipher
-- **Anahtar**: Bir sayı (örn: 3)
-- Alfabedeki her harfi belirtilen sayı kadar kaydırır
-
-#### Vigenere Cipher
-- **Anahtar**: Bir kelime (örn: "KEY")
-- Anahtar kelimesini tekrarlayarak her harfi farklı miktarda kaydırır
-
-#### XOR Cipher
-- **Anahtar**: Bir metin (örn: "secret")
-- Mesajı XOR işlemi ile şifreler
-- Base64 formatında çıktı üretir
-
-## 📁 Proje Yapısı
+## Proje Yapısı
 
 ```
-crypto-projectkopya/
+crypto_chat/
 ├── backend/
-│   ├── algorithms/          # Şifreleme algoritmaları
-│   │   ├── caesar.py
-│   │   ├── vigenere.py
-│   │   └── xor_cipher.py
-│   ├── routes/
-│   │   └── server.py       # Flask WebSocket sunucusu
-│   └── requirements.txt
+│   ├── app.py                 # Flask WebSocket sunucusu
+│   ├── requirements.txt       # Python bağımlılıkları
+│   └── encryption/
+│       ├── symmetric/         # Simetrik şifreleme modülleri
+│       │   ├── aes_lib.py
+│       │   ├── aes_manual.py
+│       │   ├── des_lib.py
+│       │   ├── des_manual.py
+│       │   └── factory.py
+│       └── asymmetric/        # Asimetrik şifreleme modülleri
+│           ├── rsa_lib.py
+│           ├── rsa_manual.py
+│           ├── ecc_lib.py
+│           ├── ecc_manual.py
+│           └── factory.py
 ├── frontend/
-│   ├── src/
-│   │   ├── components/      # React componentleri
-│   │   ├── pages/          # Sayfa componentleri
-│   │   ├── services/       # WebSocket servisi
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   └── package.json
+│   ├── templates/
+│   │   └── index.html         # Ana sayfa
+│   └── static/
+│       ├── css/
+│       │   └── style.css      # Stil dosyası
+│       └── js/
+│           ├── app.js         # Ana uygulama JavaScript
+│           └── encryption/    # JavaScript şifreleme modülleri
+│               ├── symmetric/
+│               └── asymmetric/
 └── README.md
 ```
 
-## 🔄 Nasıl Çalışır?
+## Kurulum
 
-1. **İstemcide**: Kullanıcı mesaj yazar ve istemcide şifrelenir
-2. **Sunucuya Gönderim**: Şifreli mesaj WebSocket ile sunucuya gönderilir
-3. **Sunucuda**: Mesaj deşifrelenir, işlenir ve tekrar şifrelenir
-4. **İstemciye Dönüş**: Şifreli yanıt istemciye gönderilir
-5. **İstemcide**: Gelen mesaj deşifrelenir ve kullanıcıya gösterilir
+### Gereksinimler
+- Python 3.8+
+- pip (Python paket yöneticisi)
 
-## 🛠️ Teknolojiler
+### Adımlar
 
-### Backend
-- Flask 3.1.2
-- Flask-Sock 0.5.3 (WebSocket desteği)
-- Flask-CORS 6.0.1
+1. **Backend bağımlılıklarını yükleyin:**
+```bash
+cd backend
+pip install -r requirements.txt
+```
 
-### Frontend
-- React 18.2.0
-- Vite 5.0.8
-- Native WebSocket API
+2. **Sunucuyu başlatın:**
+```bash
+python app.py
+```
 
-## 📝 Lisans
+3. **Tarayıcıda açın:**
+```
+http://localhost:5000
+```
 
-Bu proje öğrenme amaçlı hazırlanmıştır.
+## Kullanım
 
+1. **Şifreleme Ayarlarını Seçin:**
+   - Simetrik şifreleme: AES veya DES
+   - Asimetrik anahtar dağıtımı: RSA veya ECC
+   - Uygulama yöntemi: Kütüphaneli veya Manuel
 
+2. **Anahtarları Oluşturun:**
+   - "Anahtarları Oluştur" butonuna tıklayın
+   - Sistem otomatik olarak gerekli anahtarları oluşturur
 
+3. **Ayarları Uygulayın:**
+   - "Ayarları Uygula" butonuna tıklayın
+   - Ayarlar sunucuya gönderilir
+
+4. **Mesaj Gönderin:**
+   - Mesajınızı yazın
+   - "Gönder" butonuna tıklayın veya Enter'a basın
+   - Mesaj şifrelenir, sunucuya gönderilir, sunucuda deşifre edilir ve yeniden şifrelenir
+
+## Mimari
+
+### SOLID Prensipleri
+
+- **Single Responsibility**: Her modül tek bir sorumluluğa sahip
+- **Open/Closed**: Factory pattern ile yeni algoritmalar kolayca eklenebilir
+- **Liskov Substitution**: Base class'lar interface olarak kullanılır
+- **Interface Segregation**: Base class'lar minimal interface sağlar
+- **Dependency Inversion**: Factory pattern ile bağımlılıklar tersine çevrilir
+
+### Şifreleme Akışı
+
+#### Anahtar Dağıtımı (Asimetrik Şifreleme ile)
+1. **Client**: Simetrik anahtar ve asimetrik anahtar çifti oluşturur
+2. **Client → Server**: Asimetrik algoritma ve implementation bilgisi gönderilir
+3. **Server**: Kendi asimetrik anahtar çiftini oluşturur
+4. **Server → Client**: Public key gönderilir
+5. **Client**: Simetrik anahtarı sunucunun public key'i ile şifreler
+6. **Client → Server**: Şifrelenmiş simetrik anahtar gönderilir
+7. **Server**: Private key ile simetrik anahtarı deşifre eder
+
+#### Mesajlaşma (Simetrik Şifreleme ile)
+1. **Client**: Mesajı simetrik anahtarla şifreler
+2. **Client → Server**: Şifreli mesaj WebSocket ile gönderilir
+3. **Server**: Mesajı deşifre eder
+4. **Server**: Mesajı yeniden şifreler
+5. **Server → Client**: Şifreli mesaj geri gönderilir
+6. **Client**: Mesaj detaylarını gösterir
+
+## Güvenlik Notları
+
+⚠️ **ÖNEMLİ**: Bu uygulama eğitim amaçlıdır. Manuel implementasyonlar gerçek kriptografik güvenlik sağlamaz. Üretim ortamında mutlaka kütüphaneli versiyonları kullanın.
+
+## Lisans
+
+Bu proje eğitim amaçlıdır.
 

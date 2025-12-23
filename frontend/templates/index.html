@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Chat - Şifreli Mesajlaşma</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Crypto Chat</h1>
+            <p class="subtitle">Güvenli Şifreli Mesajlaşma Uygulaması</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Encryption Settings Panel -->
+            <div class="settings-panel">
+                <h2>Şifreleme Ayarları</h2>
+                
+                <div class="setting-group">
+                    <label>Simetrik Şifreleme:</label>
+                    <select id="symmetric-algorithm">
+                        <option value="aes">AES</option>
+                        <option value="des">DES</option>
+                    </select>
+                </div>
+
+                <div class="setting-group">
+                    <label>Asimetrik Anahtar Dağıtımı:</label>
+                    <select id="asymmetric-algorithm">
+                        <option value="rsa">RSA</option>
+                        <option value="ecc">ECC</option>
+                    </select>
+                </div>
+
+                <div class="setting-group">
+                    <label>Simetrik Şifreleme Yöntemi:</label>
+                    <select id="implementation">
+                        <option value="lib">Kütüphaneli</option>
+                        <option value="manual">Manuel</option>
+                    </select>
+                </div>
+
+                <button id="generate-keys-btn" class="btn btn-primary">Anahtarları Oluştur</button>
+                <button id="apply-settings-btn" class="btn btn-success">Ayarları Uygula</button>
+                
+                <div id="key-status" class="key-status"></div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div class="chat-panel">
+                <h2>Mesajlaşma</h2>
+                
+                <div id="connection-status" class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span>Bağlanıyor...</span>
+                </div>
+
+                <div id="messages" class="messages"></div>
+
+                <div class="message-input-container">
+                    <input type="text" id="message-input" placeholder="Mesajınızı yazın..." />
+                    <button id="send-btn" class="btn btn-primary">Gönder</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Details Panel -->
+        <div class="details-panel">
+            <h3>Mesaj Detayları</h3>
+            <div id="message-details"></div>
+        </div>
+    </div>
+
+    <!-- Load encryption modules -->
+    <!-- Symmetric encryption (AES/DES) - Library and Manual -->
+    <script src="{{ url_for('static', filename='js/encryption/symmetric/aes_lib.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/encryption/symmetric/aes_manual.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/encryption/symmetric/des_lib.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/encryption/symmetric/des_manual.js') }}"></script>
+    <!-- Asymmetric encryption (RSA/ECC) - Library only (for key exchange) -->
+    <script src="{{ url_for('static', filename='js/encryption/asymmetric/rsa_lib.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/encryption/asymmetric/ecc_lib.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+

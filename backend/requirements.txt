@@ -1,6 +1,9 @@
-flask==3.1.2
-flask-sock==0.5.3
-flask-cors==6.0.1
-websocket-client==1.7.0
-colorama==0.4.6
+Flask==3.0.0
+flask-socketio==5.3.5
+python-socketio==5.10.0
+cryptography==41.0.7
+eventlet==0.33.3
+
+
+
 
