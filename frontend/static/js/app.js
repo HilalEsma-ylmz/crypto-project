@@ -215,7 +215,18 @@ function arrayBufferToBase64(buffer) {
 }
 
 function createSymmetricEncryption(algo, imp) {
-    if (algo === 'aes') return imp === 'lib' ? new AESLib() : new AESManual();
+    // Klasik Şifrelemeler (S-Box Gerektirmez)
+    if (algo === 'playfair') return new PlayfairLib();
+    if (algo === 'railfence') return new RailFenceLib();
+    if (algo === 'caesar') return new CaesarLib();
+    if (algo === 'vigenere') return new VigenereLib();
+    
+    // Modern Algoritmalar (S-Box ve Padding İçerir)
+    if (algo === 'aes') {
+        return imp === 'lib' ? new AESLib() : new AESManual();
+    }
+    
+    // Varsayılan: DES
     return imp === 'lib' ? new DESLib() : new DESManual();
 }
 

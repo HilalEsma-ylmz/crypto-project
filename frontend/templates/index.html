@@ -26,6 +26,10 @@
                     <select id="symmetric-algorithm">
                         <option value="aes">AES</option>
                         <option value="des">DES</option>
+                        <option value="vigenere">Vigenere (Klasik)</option>
+                        <option value="caesar">Sezar (Klasik)</option>
+                        <option value="railfence">Rail Fence (Klasik)</option>
+                        <option value="playfair">Playfair (Klasik)</option>
                     </select>
                 </div>
 
@@ -82,6 +86,10 @@
     <script src="{{ url_for('static', filename='js/encryption/symmetric/aes_manual.js') }}"></script>
     <script src="{{ url_for('static', filename='js/encryption/symmetric/des_lib.js') }}"></script>
     <script src="{{ url_for('static', filename='js/encryption/symmetric/des_manual.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/encryption/symmetric/vigenere_lib.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/encryption/symmetric/caesar_lib.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/encryption/symmetric/railfence_lib.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/encryption/symmetric/playfair_lib.js') }}"></script>
     <!-- Asymmetric encryption (RSA/ECC) - Library only (for key exchange) -->
     <script src="{{ url_for('static', filename='js/encryption/asymmetric/rsa_lib.js') }}"></script>
     <script src="{{ url_for('static', filename='js/encryption/asymmetric/ecc_lib.js') }}"></script>
