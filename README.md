@@ -9,6 +9,7 @@ Güvenli, şifreli mesajlaşma uygulaması. Python Flask backend ve WebSocket il
 #### Simetrik Şifreleme (Mesaj Şifreleme)
 - **AES** (Advanced Encryption Standard)
 - **DES** (Data Encryption Standard)
+- **Klasik şifreleme Yöntemleri**
 - **Uygulama Yöntemleri**:
   - **Kütüphaneli**: Güvenilir kriptografi kütüphaneleri kullanarak
   - **Manuel**: Eğitim amaçlı basitleştirilmiş implementasyonlar
@@ -31,6 +32,10 @@ crypto_chat/
 │       │   ├── aes_manual.py
 │       │   ├── des_lib.py
 │       │   ├── des_manual.py
+|       |   ├── vigenere_lib.py
+|       |   ├── caesar_lib.py
+|       |   ├── railfence_lib.py
+|       |   ├── playfair_lib.py
 │       │   └── factory.py
 │       └── asymmetric/        # Asimetrik şifreleme modülleri
 │           ├── rsa_lib.py
