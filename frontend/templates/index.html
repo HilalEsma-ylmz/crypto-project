@@ -62,14 +62,17 @@
                 <div id="connection-status" class="status-indicator">
                     <span class="status-dot"></span>
                     <span>Bağlanıyor...</span>
+                    <span id="latency-display" style="margin-left: 10px; font-size: 0.9em; color: #7f8c8d;"></span>
                 </div>
 
                 <div id="messages" class="messages"></div>
 
-                <div class="message-input-container">
-                    <input type="text" id="message-input" placeholder="Mesajınızı yazın..." />
-                    <button id="send-btn" class="btn btn-primary">Gönder</button>
-                </div>
+                    <div class="input-actions">
+                        <label for="file-input" class="btn btn-secondary" style="cursor: pointer; margin-right: 5px;">📎</label>
+                        <input type="file" id="file-input" style="display: none;">
+                        <input type="text" id="message-input" placeholder="Mesajınızı yazın..." />
+                        <button id="send-btn" class="btn btn-primary">Gönder</button>
+                    </div>
             </div>
         </div>
 

@@ -18,7 +18,7 @@ app = Flask(__name__, template_folder='../frontend/templates', static_folder='..
 app.config['SECRET_KEY'] = 'your-secret-key-here'
 
 # CORS ve Async Mode ayarları (eventlet yüklü olması önerilir)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", max_http_buffer_size=10 * 1024 * 1024) # 10MB limit
 
 # İstemci şifreleme ayarlarını saklamak için (Bellek üzerinde)
 client_settings = {}

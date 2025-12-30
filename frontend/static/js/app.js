@@ -11,6 +11,9 @@ let publicKey = null;
 let privateKey = null;
 let serverPublicKey = null;
 
+// Latency Measurement
+let lastSendTime = 0;
+
 // UI Elemanları
 const symmetricAlgorithmSelect = document.getElementById('symmetric-algorithm');
 const asymmetricAlgorithmSelect = document.getElementById('asymmetric-algorithm');
@@ -19,8 +22,10 @@ const generateKeysBtn = document.getElementById('generate-keys-btn');
 const applySettingsBtn = document.getElementById('apply-settings-btn');
 const keyStatusDiv = document.getElementById('key-status');
 const connectionStatusDiv = document.getElementById('connection-status');
+const latencyDisplay = document.getElementById('latency-display');
 const messagesDiv = document.getElementById('messages');
 const messageInput = document.getElementById('message-input');
+const fileInput = document.getElementById('file-input');
 const sendBtn = document.getElementById('send-btn');
 const messageDetailsDiv = document.getElementById('message-details');
 
@@ -78,16 +83,46 @@ socket.on('settings_confirmed', (data) => {
 
 socket.on('message_response', async (data) => {
     try {
-        let decrypted;
+        const latency = performance.now() - lastSendTime;
+        if (latencyDisplay) latencyDisplay.innerText = `Gecikme: ${latency.toFixed(2)} ms`;
+
+        let decryptedPayloadStr;
+
         // Sunucudan gelen ŞİFRELİ mesajı yerel anahtarımızla çözüyoruz
         if (implementationSelect.value === 'lib') {
-            decrypted = await symmetricEncryption.decrypt(data.encrypted_payload, symmetricKey);
+            decryptedPayloadStr = await symmetricEncryption.decrypt(data.encrypted_payload, symmetricKey);
         } else {
-            decrypted = symmetricEncryption.decrypt(data.encrypted_payload, symmetricKey);
+            decryptedPayloadStr = symmetricEncryption.decrypt(data.encrypted_payload, symmetricKey);
         }
-        showMessage('Sunucu', decrypted, 'received');
 
-        messageDetailsDiv.innerHTML = `<strong>Son Gelen:</strong><br><small>Payload: ${data.encrypted_payload.substring(0,20)}...</small>`;
+        // "+..." önekini kaldır ve JSON bulmaya çalış
+        const jsonStartIndex = decryptedPayloadStr.indexOf('{');
+        const jsonEndIndex = decryptedPayloadStr.lastIndexOf('}');
+
+        let payloadString = decryptedPayloadStr;
+        if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+            payloadString = decryptedPayloadStr.substring(jsonStartIndex, jsonEndIndex + 1);
+        } else if (decryptedPayloadStr.startsWith('+')) {
+            payloadString = decryptedPayloadStr.substring(1);
+        }
+
+        let payload;
+        try {
+            payload = JSON.parse(payloadString);
+        } catch (e) {
+            // Eski format veya düz metin
+            payload = { type: 'text', content: decryptedPayloadStr.startsWith('+') ? decryptedPayloadStr.substring(1) : decryptedPayloadStr };
+        }
+
+        if (payload.type === 'text') {
+            showMessage('Sunucu', payload.content, 'received', payload.fileName);
+        } else if (payload.type === 'image') {
+            showMessage('Sunucu', `<img src="${payload.content}" style="max-width: 200px; border-radius: 5px;">`, 'received', payload.fileName);
+        } else if (payload.type === 'file') {
+            showMessage('Sunucu', `<a href="${payload.content}" download="${payload.fileName || 'dosya'}">📄 ${payload.fileName || 'Dosya İndir'}</a>`, 'received');
+        }
+
+        messageDetailsDiv.innerHTML = `<strong>Son Gelen:</strong><br><small>Payload: ${data.encrypted_payload.substring(0, 20)}...</small>`;
     } catch (error) {
         console.error("Mesaj çözme hatası:", error);
     }
@@ -135,7 +170,79 @@ applySettingsBtn.addEventListener('click', async () => {
     }
 });
 
-// --- ŞİFRELEME VE AYAR GÖNDERME ---
+// --- DOSYA VE MESAJ GÖNDERME ---
+
+fileInput.addEventListener('change', async () => {
+    if (fileInput.files.length > 0) {
+        await sendFile(fileInput.files[0]);
+        fileInput.value = ''; // Reset
+    }
+});
+
+async function sendFile(file) {
+    if (!symmetricKey) return alert('Önce anahtarları oluşturun!');
+
+    // Manuel modda büyük dosya uyarısı (Limit artırıldı: 1MB)
+    if (implementationSelect.value === 'manual' && file.size > 1024 * 1024) {
+        if (!confirm("Manuel şifreleme büyük dosyalarda (1MB+) yavaş çalışabilir ve tarayıcıyı dondurabilir. Devam etmek istiyor musunuz?")) return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function (e) {
+        const content = e.target.result;
+        const type = file.type.startsWith('image/') ? 'image' : 'file';
+
+        const payload = JSON.stringify({
+            type: type,
+            content: content,
+            fileName: file.name
+        });
+
+        await processAndSendMessage(payload, type === 'image' ? `<img src="${content}" style="max-width: 100px;">` : `📄 ${file.name}`);
+    };
+    reader.readAsDataURL(file);
+}
+
+async function sendMessage() {
+    const text = messageInput.value.trim();
+    if (!text) return;
+
+    const payload = JSON.stringify({
+        type: 'text',
+        content: text
+    });
+
+    await processAndSendMessage(payload, text);
+    messageInput.value = '';
+}
+
+async function processAndSendMessage(plainPayload, displayContent) {
+    if (!symmetricKey) return;
+
+    try {
+        lastSendTime = performance.now();
+        let encrypted;
+
+        if (implementationSelect.value === 'lib') {
+            encrypted = await symmetricEncryption.encrypt(plainPayload, symmetricKey);
+        } else {
+            encrypted = symmetricEncryption.encrypt(plainPayload, symmetricKey);
+        }
+
+        socket.emit('message', { message: encrypted });
+        showMessage('Siz', displayContent, 'sent');
+
+        if (latencyDisplay) latencyDisplay.innerText = 'Gönderiliyor...';
+    } catch (error) {
+        showMessage('Hata', 'Mesaj şifrelenemedi: ' + error.message, 'error');
+        console.error(error);
+    }
+}
+
+sendBtn.addEventListener('click', sendMessage);
+messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+// --- ŞİFRELEME VE AYAR GÖNDERME YARDIMCILARI ---
 
 async function processAndSendSettings() {
     try {
@@ -173,31 +280,6 @@ async function processAndSendSettings() {
     }
 }
 
-// --- MESAJ GÖNDERME ---
-
-async function sendMessage() {
-    const message = messageInput.value.trim();
-    if (!message || !symmetricKey) return;
-
-    try {
-        let encrypted;
-        if (implementationSelect.value === 'lib') {
-            encrypted = await symmetricEncryption.encrypt(message, symmetricKey);
-        } else {
-            encrypted = symmetricEncryption.encrypt(message, symmetricKey);
-        }
-
-        socket.emit('message', { message: encrypted });
-        showMessage('Siz', message, 'sent');
-        messageInput.value = '';
-    } catch (error) {
-        showMessage('Hata', 'Mesaj şifrelenemedi: ' + error.message, 'error');
-    }
-}
-
-sendBtn.addEventListener('click', sendMessage);
-messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
-
 // --- YARDIMCI ARAÇLAR ---
 
 function base64ToUint8Array(base64) {
@@ -220,12 +302,12 @@ function createSymmetricEncryption(algo, imp) {
     if (algo === 'railfence') return new RailFenceLib();
     if (algo === 'caesar') return new CaesarLib();
     if (algo === 'vigenere') return new VigenereLib();
-    
+
     // Modern Algoritmalar (S-Box ve Padding İçerir)
     if (algo === 'aes') {
         return imp === 'lib' ? new AESLib() : new AESManual();
     }
-    
+
     // Varsayılan: DES
     return imp === 'lib' ? new DESLib() : new DESManual();
 }
@@ -241,10 +323,11 @@ function updateConnectionStatus(connected) {
     if (statusText) statusText.innerText = connected ? 'Bağlı' : 'Bağlantı Kesildi';
 }
 
-function showMessage(sender, content, type) {
+function showMessage(sender, content, type, title = '') {
     const div = document.createElement('div');
     div.className = `message ${type}`;
-    div.innerHTML = `<div class="message-header">${sender}</div><div class="message-content">${content}</div>`;
+    const headerTitle = title ? ` - ${title}` : '';
+    div.innerHTML = `<div class="message-header">${sender}${headerTitle}</div><div class="message-content">${content}</div>`;
     messagesDiv.appendChild(div);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
