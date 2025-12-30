@@ -1,84 +1,65 @@
-"""
-AES encryption manual implementation (simplified version).
-Note: This is a simplified educational implementation.
-For production, use the library version.
-"""
-
 import base64
 import os
 from .base import SymmetricEncryption
 
-
 class AESManual(SymmetricEncryption):
-    """
-    Simplified manual AES implementation.
-    WARNING: This is for educational purposes only.
-    For production use, prefer AESLib.
-    """
-    
     def __init__(self):
         self.block_size = 16
-    
-    def encrypt(self, plaintext: str, key: bytes) -> str:
-        """Simplified AES encryption."""
-        # This is a placeholder - full AES implementation is very complex
-        # For demonstration, we'll use XOR cipher with key expansion
-        iv = os.urandom(self.block_size)
-        plaintext_bytes = plaintext.encode('utf-8')
-        padded_text = self._pad(plaintext_bytes)
+
+    def _generate_dynamic_sbox(self, key: bytes):
+        sbox = list(range(256))
+        # JS tarafıyla birebir aynı toplam sonucunu almak için % 256 eklenmiştir
+        seed = sum(list(key)) % 256 
+        for i in range(255, 0, -1):
+            j = (seed + i) % (i + 1)
+            sbox[i], sbox[j] = sbox[j], sbox[i]
+            seed = (seed + sbox[i]) % 256
+        return sbox
+
+    def encrypt(self, plaintext, key: bytes) -> str:
+        sbox = self._generate_dynamic_sbox(key)
+        iv = os.urandom(16)
+        if isinstance(plaintext, str):
+            data = self._pad(plaintext.encode('utf-8'))
+        else:
+            data = self._pad(plaintext)
+            
+        res = bytearray()
+        for i in range(len(data)):
+            # S-Box -> Key XOR -> IV XOR sırası
+            val = sbox[data[i]] ^ key[i % len(key)] ^ iv[i % 16]
+            res.append(val)
+        # IV ve şifreli veriyi birleştirip base64 yapıyoruz
+        return base64.b64encode(iv + res).decode('utf-8')
+
+    def decrypt(self, ciphertext: str, key: bytes):
+        sbox = self._generate_dynamic_sbox(key)
+        inv_sbox = [0] * 256
+        for i, v in enumerate(sbox): inv_sbox[v] = i
         
-        # Simple XOR encryption (NOT real AES, just for demonstration)
-        encrypted = bytearray()
-        key_expanded = self._expand_key(key, len(padded_text))
+        combined = base64.b64decode(ciphertext.encode('utf-8'))
+        iv, data = combined[:16], combined[16:]
+        res = bytearray()
+        for i in range(len(data)):
+            # XOR işlemlerini tersine alıyoruz
+            val = data[i] ^ key[i % len(key)] ^ iv[i % 16]
+            res.append(inv_sbox[val])
         
-        for i, byte in enumerate(padded_text):
-            encrypted.append(byte ^ key_expanded[i] ^ iv[i % len(iv)])
-        
-        encrypted_data = iv + bytes(encrypted)
-        return base64.b64encode(encrypted_data).decode('utf-8')
-    
-    def decrypt(self, ciphertext: str, key: bytes) -> str:
-        """Simplified AES decryption."""
-        encrypted_data = base64.b64decode(ciphertext.encode('utf-8'))
-        iv = encrypted_data[:self.block_size]
-        ciphertext_bytes = encrypted_data[self.block_size:]
-        
-        # Simple XOR decryption
-        decrypted = bytearray()
-        key_expanded = self._expand_key(key, len(ciphertext_bytes))
-        
-        for i, byte in enumerate(ciphertext_bytes):
-            decrypted.append(byte ^ key_expanded[i] ^ iv[i % len(iv)])
-        
-        plaintext = self._unpad(bytes(decrypted))
-        return plaintext.decode('utf-8')
-    
-    def generate_key(self, key_size: int = 256) -> bytes:
-        """Generate a random key."""
-        if key_size not in [128, 192, 256]:
-            key_size = 256
-        return os.urandom(key_size // 8)
-    
-    def _expand_key(self, key: bytes, length: int) -> bytes:
-        """Expand key to required length."""
-        expanded = bytearray()
-        for i in range(length):
-            expanded.append(key[i % len(key)])
-        return bytes(expanded)
-    
+        decrypted_bytes = self._unpad(bytes(res))
+        try:
+            return decrypted_bytes.decode('utf-8')
+        except UnicodeDecodeError:
+            return decrypted_bytes
+
     def _pad(self, data: bytes) -> bytes:
-        """PKCS7 padding."""
-        padding_length = self.block_size - (len(data) % self.block_size)
-        padding = bytes([padding_length] * padding_length)
-        return data + padding
-    
+        p = self.block_size - (len(data) % self.block_size)
+        return data + bytes([p] * p)
+
     def _unpad(self, data: bytes) -> bytes:
-        """Remove PKCS7 padding."""
-        if len(data) == 0:
-            return data
-        padding_length = data[-1]
-        return data[:-padding_length]
+        if not data: return b""
+        p = data[-1]
+        if 0 < p <= self.block_size: return data[:-p]
+        return data
 
-
-
-
+    def generate_key(self, key_size: int = 128) -> bytes:
+        return os.urandom(key_size // 8)

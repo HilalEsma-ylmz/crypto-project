@@ -1,133 +1,72 @@
-/**
- * AES encryption manual implementation (simplified)
- * WARNING: This is for educational purposes only
- */
-
 class AESManual {
-    constructor() {
-        this.blockSize = 16;
-    }
-
-    encrypt(plaintext, key) {
-        try {
-            // Generate IV
-            const iv = this.generateRandomBytes(this.blockSize);
-            
-            // Convert to bytes
-            const plaintextBytes = this.stringToBytes(plaintext);
-            const paddedText = this.pad(plaintextBytes);
-            
-            // Simple XOR encryption (NOT real AES, just for demonstration)
-            const encrypted = [];
-            const keyExpanded = this.expandKey(key, paddedText.length);
-            
-            for (let i = 0; i < paddedText.length; i++) {
-                // Ensure byte value is in range 0-255
-                const byteValue = (paddedText[i] ^ keyExpanded[i] ^ iv[i % iv.length]) & 0xFF;
-                encrypted.push(byteValue);
-            }
-            
-            // Combine IV and encrypted data
-            const combined = [...iv, ...encrypted];
-            
-            return this.bytesToBase64(combined);
-        } catch (error) {
-            throw new Error('AES manual encryption failed: ' + error.message);
+    generateDynamicSBox(key) {
+        let sbox = Array.from({length: 256}, (_, i) => i);
+        let seed = Array.from(key).reduce((a, b) => a + b, 0) % 256;
+        for (let i = 255; i > 0; i--) {
+            let j = (seed + i) % (i + 1);
+            [sbox[i], sbox[j]] = [sbox[j], sbox[i]];
+            seed = (seed + sbox[i]) % 256;
         }
+        return sbox;
     }
 
-    decrypt(ciphertext, key) {
-        try {
-            // Decode base64
-            const combined = this.base64ToBytes(ciphertext);
-            const iv = combined.slice(0, this.blockSize);
-            const ciphertextBytes = combined.slice(this.blockSize);
-            
-            // Simple XOR decryption
-            const decrypted = [];
-            const keyExpanded = this.expandKey(key, ciphertextBytes.length);
-            
-            for (let i = 0; i < ciphertextBytes.length; i++) {
-                // Ensure byte value is in range 0-255
-                const byteValue = (ciphertextBytes[i] ^ keyExpanded[i] ^ iv[i % iv.length]) & 0xFF;
-                decrypted.push(byteValue);
-            }
-            
-            const unpadded = this.unpad(decrypted);
-            return this.bytesToString(unpadded);
-        } catch (error) {
-            throw new Error('AES manual decryption failed: ' + error.message);
+    async encrypt(plaintext, key) {
+        const sbox = this.generateDynamicSBox(key);
+        const iv = window.crypto.getRandomValues(new Uint8Array(16));
+        const data = this.pad(new TextEncoder().encode(plaintext));
+        const res = new Uint8Array(data.length);
+        
+        for (let i = 0; i < data.length; i++) {
+            let val = sbox[data[i]];
+            res[i] = val ^ key[i % key.length] ^ iv[i % 16];
         }
+
+        const combined = new Uint8Array(iv.length + res.length);
+        combined.set(iv);
+        combined.set(res, iv.length);
+        return this.arrayBufferToBase64(combined);
     }
 
-    generateKey(keySize = 256) {
-        return this.generateRandomBytes(keySize / 8);
-    }
+    async decrypt(ciphertext, key) {
+        const sbox = this.generateDynamicSBox(key);
+        const invSbox = new Array(256);
+        for(let i=0; i<256; i++) invSbox[sbox[i]] = i;
 
-    expandKey(key, length) {
-        const expanded = [];
-        for (let i = 0; i < length; i++) {
-            expanded.push(key[i % key.length]);
+        const combined = this.base64ToArrayBuffer(ciphertext);
+        const iv = combined.slice(0, 16);
+        const data = combined.slice(16);
+        const res = new Uint8Array(data.length);
+
+        for (let i = 0; i < data.length; i++) {
+            let val = data[i] ^ key[i % key.length] ^ iv[i % 16];
+            res[i] = invSbox[val % 256];
         }
-        return expanded;
+        return new TextDecoder().decode(this.unpad(res));
     }
 
-    pad(data) {
-        const paddingLength = this.blockSize - (data.length % this.blockSize);
-        const padded = [...data];
-        for (let i = 0; i < paddingLength; i++) {
-            padded.push(paddingLength);
-        }
+    pad(d) {
+        const p = 16 - (d.length % 16);
+        const padded = new Uint8Array(d.length + p);
+        padded.set(d);
+        for (let i = d.length; i < padded.length; i++) padded[i] = p;
         return padded;
     }
 
-    unpad(data) {
-        if (data.length === 0) return data;
-        const paddingLength = data[data.length - 1];
-        return data.slice(0, data.length - paddingLength);
+    unpad(d) {
+        const p = d[d.length - 1];
+        return d.slice(0, d.length - p);
     }
 
-    generateRandomBytes(length) {
-        const bytes = [];
-        for (let i = 0; i < length; i++) {
-            bytes.push(Math.floor(Math.random() * 256));
-        }
-        return bytes;
-    }
-
-    stringToBytes(str) {
-        const bytes = [];
-        for (let i = 0; i < str.length; i++) {
-            bytes.push(str.charCodeAt(i));
-        }
-        return bytes;
-    }
-
-    bytesToString(bytes) {
-        return String.fromCharCode(...bytes);
-    }
-
-    bytesToBase64(bytes) {
-        // Convert array to Uint8Array for safe base64 encoding
-        const uint8Array = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-        
-        // Use binary string method that works with all byte values
+    arrayBufferToBase64(uint8) {
         let binary = '';
-        for (let i = 0; i < uint8Array.length; i++) {
-            // Ensure byte value is in valid range (0-255)
-            const byte = uint8Array[i] & 0xFF;
-            binary += String.fromCharCode(byte);
-        }
+        uint8.forEach(b => binary += String.fromCharCode(b));
         return btoa(binary);
     }
 
-    base64ToBytes(base64) {
+    base64ToArrayBuffer(base64) {
         const binary = atob(base64);
-        const bytes = [];
-        for (let i = 0; i < binary.length; i++) {
-            bytes.push(binary.charCodeAt(i));
-        }
-        return bytes;
+        return Uint8Array.from(binary, c => c.charCodeAt(0));
     }
-}
 
+    async generateKey() { return window.crypto.getRandomValues(new Uint8Array(16)); }
+}

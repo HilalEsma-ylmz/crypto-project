@@ -1,77 +1,58 @@
-"""
-DES encryption manual implementation (simplified version).
-Note: This is a simplified educational implementation.
-For production, use the library version.
-"""
-
 import base64
 import os
 from .base import SymmetricEncryption
 
-
 class DESManual(SymmetricEncryption):
-    """
-    Simplified manual DES implementation.
-    WARNING: This is for educational purposes only.
-    For production use, prefer DESLib.
-    """
-    
     def __init__(self):
         self.block_size = 8
-    
+
+    def _generate_dynamic_sbox(self, key: bytes):
+        sbox = list(range(256))
+        seed = sum(key) % 256
+        for i in range(255, 0, -1):
+            j = (seed + i) % (i + 1)
+            sbox[i], sbox[j] = sbox[j], sbox[i]
+            seed = (seed + sbox[i]) % 256
+        return sbox
+
     def encrypt(self, plaintext: str, key: bytes) -> str:
-        """Simplified DES encryption."""
-        # Ensure 8-byte key
-        if len(key) != 8:
-            key = key[:8] if len(key) >= 8 else key.ljust(8, b'\0')
-        
-        iv = os.urandom(self.block_size)
-        plaintext_bytes = plaintext.encode('utf-8')
-        padded_text = self._pad(plaintext_bytes)
-        
-        # Simple XOR encryption (NOT real DES, just for demonstration)
-        encrypted = bytearray()
-        for i, byte in enumerate(padded_text):
-            encrypted.append(byte ^ key[i % len(key)] ^ iv[i % len(iv)])
-        
-        encrypted_data = iv + bytes(encrypted)
-        return base64.b64encode(encrypted_data).decode('utf-8')
-    
+        sbox = self._generate_dynamic_sbox(key)
+        key_bytes = key[:8].ljust(8, b'\0')
+        iv = os.urandom(8)
+        data = self._pad(plaintext.encode('utf-8'))
+        res = bytearray()
+        for i in range(len(data)):
+            # Sbox -> XOR -> Swap (JS sırasıyla eşlendi)
+            sub = sbox[data[i] % 256]
+            val = sub ^ key_bytes[i % 8] ^ iv[i % 8]
+            swapped = ((val << 4) | (val >> 4)) & 0xFF
+            res.append(swapped)
+        return base64.b64encode(iv + res).decode('utf-8')
+
     def decrypt(self, ciphertext: str, key: bytes) -> str:
-        """Simplified DES decryption."""
-        # Ensure 8-byte key
-        if len(key) != 8:
-            key = key[:8] if len(key) >= 8 else key.ljust(8, b'\0')
+        sbox = self._generate_dynamic_sbox(key)
+        inv_sbox = [0] * 256
+        for i, v in enumerate(sbox): inv_sbox[v] = i
         
-        encrypted_data = base64.b64decode(ciphertext.encode('utf-8'))
-        iv = encrypted_data[:self.block_size]
-        ciphertext_bytes = encrypted_data[self.block_size:]
-        
-        # Simple XOR decryption
-        decrypted = bytearray()
-        for i, byte in enumerate(ciphertext_bytes):
-            decrypted.append(byte ^ key[i % len(key)] ^ iv[i % len(iv)])
-        
-        plaintext = self._unpad(bytes(decrypted))
-        return plaintext.decode('utf-8')
-    
-    def generate_key(self, key_size: int = 64) -> bytes:
-        """Generate a random DES key (8 bytes)."""
-        return os.urandom(8)
-    
+        key_bytes = key[:8].ljust(8, b'\0')
+        combined = base64.b64decode(str(ciphertext).encode('utf-8'))
+        iv, data = combined[:8], combined[8:]
+        res = bytearray()
+        for i in range(len(data)):
+            # Unswap -> XOR -> Inverse Sbox
+            val = ((data[i] >> 4) | (data[i] << 4)) & 0xFF
+            orig_val = val ^ key_bytes[i % 8] ^ iv[i % 8]
+            res.append(inv_sbox[orig_val % 256])
+        return self._unpad(bytes(res)).decode('utf-8', errors='ignore')
+
     def _pad(self, data: bytes) -> bytes:
-        """PKCS7 padding."""
-        padding_length = self.block_size - (len(data) % self.block_size)
-        padding = bytes([padding_length] * padding_length)
-        return data + padding
-    
+        p = 8 - (len(data) % 8)
+        return data + bytes([p] * p)
+
     def _unpad(self, data: bytes) -> bytes:
-        """Remove PKCS7 padding."""
-        if len(data) == 0:
-            return data
-        padding_length = data[-1]
-        return data[:-padding_length]
+        if not data: return b""
+        p = data[-1]
+        return data[:-p] if 0 < p <= 8 else data
 
-
-
-
+    def generate_key(self, key_size: int = 64) -> bytes:
+        return os.urandom(8)
